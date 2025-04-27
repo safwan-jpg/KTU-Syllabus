@@ -3,224 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KTU Syllabus Viewer</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f9;
-            color: #333;
-        }
-
-        header {
-            background-color: #00509E;
-            color: white;
-            padding: 1rem;
-            text-align: center;
-        }
-
-        main {
-            padding: 1rem;
-        }
-
-        section {
-            margin-bottom: 2rem;
-        }
-
-        h2 {
-            color: #00509E;
-        }
-
-        select, ul, button {
-            width: 100%;
-            max-width: 300px;
-            margin: 0.5rem 0;
-            padding: 0.5rem;
-            font-size: 1rem;
-        }
-
-        ul {
-            list-style: none;
-            padding: 0;
-        }
-
-        ul li {
-            margin: 0.5rem 0;
-        }
-
-        ul li a {
-            text-decoration: none;
-            color: #00509E;
-            font-weight: bold;
-        }
-
-        ul li a:hover {
-            text-decoration: underline;
-        }
-
-        footer {
-            background-color: #00509E;
-            color: white;
-            text-align: center;
-            padding: 1rem;
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-        }
-    </style>
+    <title>KTU Syllabus</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <header>
         <h1>KTU Syllabus Viewer</h1>
     </header>
+
     <main>
-        <section id="repo-structure">
-            <h2>Select Scheme, Department, and Semester</h2>
+        <!-- Step 1: Choose Scheme -->
+        <section id="scheme-selection">
+            <h2>Select Scheme</h2>
             <select id="scheme-dropdown">
                 <option value="">-- Choose Scheme --</option>
             </select>
-            <select id="department-dropdown" style="display:none;">
+        </section>
+
+        <!-- Step 2: Choose Department -->
+        <section id="department-selection" style="display: none;">
+            <h2>Select Department</h2>
+            <select id="department-dropdown">
                 <option value="">-- Choose Department --</option>
             </select>
-            <select id="semester-dropdown" style="display:none;">
+        </section>
+
+        <!-- Step 3: Choose Semester -->
+        <section id="semester-selection" style="display: none;">
+            <h2>Select Semester</h2>
+            <select id="semester-dropdown">
                 <option value="">-- Choose Semester --</option>
             </select>
         </section>
-        <section id="pdf-list" style="display:none;">
+
+        <!-- Step 4: Display PDFs -->
+        <section id="pdf-list" style="display: none;">
             <h2>Available PDFs</h2>
             <ul id="pdf-files"></ul>
         </section>
     </main>
+
     <footer>
-        <p>&copy; 2025 KTU Syllabus Viewer | All rights reserved.</p>
+        <p>&copy; 2025 KTU Syllabus Viewer</p>
     </footer>
-    <script>
-        // Configuration
-        const REPO_OWNER = "safwan-rcet";
-        const REPO_NAME = "KTU-Syllabus";
-        const BRANCH_NAME = "main";
 
-        // GitHub API endpoint
-        const GITHUB_API_BASE_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/syllabus?ref=${BRANCH_NAME}`;
-
-        // DOM Elements
-        const schemeDropdown = document.getElementById("scheme-dropdown");
-        const departmentDropdown = document.getElementById("department-dropdown");
-        const semesterDropdown = document.getElementById("semester-dropdown");
-        const pdfFilesList = document.getElementById("pdf-files");
-
-        // Fetch folder contents from GitHub API
-        async function fetchFolderContents(url) {
-            try {
-                const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch folder contents: ${response.status}`);
-                }
-                return await response.json();
-            } catch (error) {
-                console.error(error);
-                return [];
-            }
-        }
-
-        // Initialize dropdowns
-        async function initializeDropdowns() {
-            const schemes = await fetchFolderContents(GITHUB_API_BASE_URL);
-            if (schemes.length === 0) {
-                alert("Failed to load syllabus data.");
-                return;
-            }
-
-            // Populate Scheme Dropdown
-            schemes.forEach((scheme) => {
-                if (scheme.type === "dir") {
-                    const option = document.createElement("option");
-                    option.value = scheme.name;
-                    option.textContent = scheme.name;
-                    schemeDropdown.appendChild(option);
-                }
-            });
-
-            // Handle Scheme Selection
-            schemeDropdown.addEventListener("change", async () => {
-                const selectedScheme = schemeDropdown.value;
-                departmentDropdown.innerHTML = '<option value="">-- Choose Department --</option>';
-                semesterDropdown.innerHTML = '<option value="">-- Choose Semester --</option>';
-                pdfFilesList.innerHTML = '';
-                departmentDropdown.style.display = "none";
-                semesterDropdown.style.display = "none";
-                pdfFilesList.parentElement.style.display = "none";
-
-                if (selectedScheme) {
-                    const departments = await fetchFolderContents(`${GITHUB_API_BASE_URL}/${selectedScheme}`);
-                    departments.forEach((dept) => {
-                        if (dept.type === "dir") {
-                            const option = document.createElement("option");
-                            option.value = dept.name;
-                            option.textContent = dept.name;
-                            departmentDropdown.appendChild(option);
-                        }
-                    });
-                    departmentDropdown.style.display = "block";
-                }
-            });
-
-            // Handle Department Selection
-            departmentDropdown.addEventListener("change", async () => {
-                const selectedScheme = schemeDropdown.value;
-                const selectedDepartment = departmentDropdown.value;
-                semesterDropdown.innerHTML = '<option value="">-- Choose Semester --</option>';
-                pdfFilesList.innerHTML = '';
-                semesterDropdown.style.display = "none";
-                pdfFilesList.parentElement.style.display = "none";
-
-                if (selectedDepartment) {
-                    const semesters = await fetchFolderContents(
-                        `${GITHUB_API_BASE_URL}/${selectedScheme}/${selectedDepartment}`
-                    );
-                    semesters.forEach((sem) => {
-                        if (sem.type === "dir") {
-                            const option = document.createElement("option");
-                            option.value = sem.name;
-                            option.textContent = sem.name;
-                            semesterDropdown.appendChild(option);
-                        }
-                    });
-                    semesterDropdown.style.display = "block";
-                }
-            });
-
-            // Handle Semester Selection
-            semesterDropdown.addEventListener("change", async () => {
-                const selectedScheme = schemeDropdown.value;
-                const selectedDepartment = departmentDropdown.value;
-                const selectedSemester = semesterDropdown.value;
-                pdfFilesList.innerHTML = '';
-                pdfFilesList.parentElement.style.display = "none";
-
-                if (selectedSemester) {
-                    const pdfFiles = await fetchFolderContents(
-                        `${GITHUB_API_BASE_URL}/${selectedScheme}/${selectedDepartment}/${selectedSemester}`
-                    );
-                    pdfFiles.forEach((file) => {
-                        if (file.type === "file" && file.name.endsWith(".pdf")) {
-                            const listItem = document.createElement("li");
-                            const link = document.createElement("a");
-                            link.href = file.download_url;
-                            link.textContent = file.name;
-                            link.target = "_blank";
-                            listItem.appendChild(link);
-                            pdfFilesList.appendChild(listItem);
-                        }
-                    });
-                    pdfFilesList.parentElement.style.display = "block";
-                }
-            });
-        }
-
-        // Initialize the dropdowns on page load
-        initializeDropdowns();
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
