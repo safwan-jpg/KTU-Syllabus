@@ -1,5 +1,5 @@
-// Configuration for GitHub Pages
-const BASE_URL = "https://safwan-rcet.github.io/KTU-Syllabus/syllabus/"; // Path to the syllabus folder
+// Base URL for the syllabus folder hosted on GitHub Pages
+const BASE_URL = "https://safwan-rcet.github.io/KTU-Syllabus/syllabus/";
 
 // DOM Elements
 const schemeDropdown = document.getElementById("scheme-dropdown");
@@ -12,9 +12,9 @@ const semesterSection = document.getElementById("semester-selection");
 const pdfSection = document.getElementById("pdf-list");
 
 // Fetch folder structure and populate dropdowns
-async function fetchFolderContents(path) {
+async function fetchFolderContents(url) {
     try {
-        const response = await fetch(path);
+        const response = await fetch(url, { method: "GET", mode: "cors" });
         if (!response.ok) {
             throw new Error(`Failed to fetch folder contents: ${response.status}`);
         }
