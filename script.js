@@ -1,5 +1,10 @@
-// Base URL for the syllabus folder hosted on GitHub Pages
-const BASE_URL = "https://safwan-rcet.github.io/KTU-Syllabus/syllabus/";
+// Configuration
+const REPO_OWNER = "safwan-rcet"; // Your GitHub username
+const REPO_NAME = "KTU-Syllabus"; // Your repository name
+const BRANCH_NAME = "main"; // Your branch name (e.g., main)
+
+// GitHub API endpoint to fetch folder contents
+const GITHUB_API_BASE_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/syllabus?ref=${BRANCH_NAME}`;
 
 // DOM Elements
 const schemeDropdown = document.getElementById("scheme-dropdown");
@@ -11,29 +16,23 @@ const departmentSection = document.getElementById("department-selection");
 const semesterSection = document.getElementById("semester-selection");
 const pdfSection = document.getElementById("pdf-list");
 
-// Fetch folder structure and populate dropdowns
+// Fetch folder contents from GitHub API
 async function fetchFolderContents(url) {
     try {
-        const response = await fetch(url, { method: "GET", mode: "cors" });
+        const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`Failed to fetch folder contents: ${response.status}`);
         }
-
-        const text = await response.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(text, "text/html");
-        const links = Array.from(doc.querySelectorAll("a")).map((a) => a.href);
-
-        return links.filter((link) => !link.endsWith("../"));
+        return await response.json();
     } catch (error) {
         console.error(error);
         return [];
     }
 }
 
-// Initialize dropdowns
+// Initialize dropdowns by fetching syllabus folder structure
 async function initializeDropdowns() {
-    const schemes = await fetchFolderContents(BASE_URL);
+    const schemes = await fetchFolderContents(GITHUB_API_BASE_URL);
 
     if (schemes.length === 0) {
         alert("Failed to load syllabus data.");
@@ -42,11 +41,12 @@ async function initializeDropdowns() {
 
     // Populate Scheme Dropdown
     schemes.forEach((scheme) => {
-        const schemeName = scheme.split("/").slice(-2, -1)[0];
-        const option = document.createElement("option");
-        option.value = scheme;
-        option.textContent = schemeName;
-        schemeDropdown.appendChild(option);
+        if (scheme.type === "dir") {
+            const option = document.createElement("option");
+            option.value = scheme.name;
+            option.textContent = scheme.name;
+            schemeDropdown.appendChild(option);
+        }
     });
 
     // Handle Scheme Selection
@@ -60,13 +60,14 @@ async function initializeDropdowns() {
         pdfSection.style.display = "none";
 
         if (selectedScheme) {
-            const departments = await fetchFolderContents(selectedScheme);
-            departments.forEach((department) => {
-                const departmentName = department.split("/").slice(-2, -1)[0];
-                const option = document.createElement("option");
-                option.value = department;
-                option.textContent = departmentName;
-                departmentDropdown.appendChild(option);
+            const departments = await fetchFolderContents(`${GITHUB_API_BASE_URL}/${selectedScheme}`);
+            departments.forEach((dept) => {
+                if (dept.type === "dir") {
+                    const option = document.createElement("option");
+                    option.value = dept.name;
+                    option.textContent = dept.name;
+                    departmentDropdown.appendChild(option);
+                }
             });
             departmentSection.style.display = "block";
         }
@@ -74,6 +75,7 @@ async function initializeDropdowns() {
 
     // Handle Department Selection
     departmentDropdown.addEventListener("change", async () => {
+        const selectedScheme = schemeDropdown.value;
         const selectedDepartment = departmentDropdown.value;
         semesterDropdown.innerHTML = '<option value="">-- Choose Semester --</option>';
         pdfFilesList.innerHTML = '';
@@ -81,13 +83,16 @@ async function initializeDropdowns() {
         pdfSection.style.display = "none";
 
         if (selectedDepartment) {
-            const semesters = await fetchFolderContents(selectedDepartment);
-            semesters.forEach((semester) => {
-                const semesterName = semester.split("/").slice(-2, -1)[0];
-                const option = document.createElement("option");
-                option.value = semester;
-                option.textContent = semesterName;
-                semesterDropdown.appendChild(option);
+            const semesters = await fetchFolderContents(
+                `${GITHUB_API_BASE_URL}/${selectedScheme}/${selectedDepartment}`
+            );
+            semesters.forEach((sem) => {
+                if (sem.type === "dir") {
+                    const option = document.createElement("option");
+                    option.value = sem.name;
+                    option.textContent = sem.name;
+                    semesterDropdown.appendChild(option);
+                }
             });
             semesterSection.style.display = "block";
         }
@@ -95,19 +100,22 @@ async function initializeDropdowns() {
 
     // Handle Semester Selection
     semesterDropdown.addEventListener("change", async () => {
+        const selectedScheme = schemeDropdown.value;
+        const selectedDepartment = departmentDropdown.value;
         const selectedSemester = semesterDropdown.value;
         pdfFilesList.innerHTML = '';
         pdfSection.style.display = "none";
 
         if (selectedSemester) {
-            const pdfFiles = await fetchFolderContents(selectedSemester);
+            const pdfFiles = await fetchFolderContents(
+                `${GITHUB_API_BASE_URL}/${selectedScheme}/${selectedDepartment}/${selectedSemester}`
+            );
             pdfFiles.forEach((file) => {
-                const fileName = file.split("/").slice(-1)[0];
-                if (fileName.endsWith(".pdf")) {
+                if (file.type === "file" && file.name.endsWith(".pdf")) {
                     const listItem = document.createElement("li");
                     const link = document.createElement("a");
-                    link.href = file;
-                    link.textContent = fileName;
+                    link.href = file.download_url;
+                    link.textContent = file.name;
                     link.target = "_blank";
                     listItem.appendChild(link);
                     pdfFilesList.appendChild(listItem);
@@ -118,5 +126,5 @@ async function initializeDropdowns() {
     });
 }
 
-// Initialize dropdowns on page load
+// Initialize the dropdowns on page load
 initializeDropdowns();
